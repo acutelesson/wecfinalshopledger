@@ -1341,6 +1341,8 @@ function getSheetData(sheet) {
                 if (typeof renderAuditTable === 'function') renderAuditTable();
                 if (typeof renderTransactions === 'function') renderTransactions();
                 if (typeof renderLedger === 'function') renderLedger();
+                if (typeof renderLeaderboard === 'function') renderLeaderboard();
+              
 
                 document.getElementById('sync-status-badge').innerText = "Synced (Google Sheet)";
                 document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
