@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malaysia Techlympics - Virtual Store & Ledger System v2.5</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML5 QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- QRCode.js Library for Badges -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        orbitron: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        spaceDark: '#1E293B',
+                        spaceNav: '#0F172A',
+                        accentBlue: '#74B9FF',
+                        accentGreen: '#55EFC4',
+                        accentRed: '#FF7675',
+                        accentYellow: '#FFEAA7',
+                        accentPurple: '#A29BFE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printable-badge-area, #printable-badge-area * { visibility: visible; }
+            #printable-badge-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+        .animate-scan {
+            animation: scan 2s infinite linear;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 90%; }
+            100% { top: 0%; }
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 font-sans min-h-screen flex flex-col selection:bg-accentBlue selection:text-white">
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-3">
+        <i id="toast-icon" data-lucide="info" class="w-5 h-5"></i>
+        <span id="toast-message">Mesej Notifikasi</span>
+    </div>
+
+    <!-- MAIN HEADER & NAVIGATION -->
+    <header class="bg-spaceNav text-white sticky top-0 z-40 border-b border-slate-700/60 shadow-lg no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Brand & Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-accentBlue to-accentGreen flex items-center justify-center text-slate-900 shadow-md">
+                    <i data-lucide="rocket" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full bg-accentYellow text-slate-900 font-orbitron">
+                            Malaysia Techlympics v2.5
+                        </span>
+                        <span id="sync-status-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                            Offline (Local)
+                        </span>
+                    </div>
+                    <h1 class="text-base font-extrabold tracking-tight text-white font-orbitron">
+                        Virtual Store & Ledger System (63 Teams)
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Session Controls & Quick Switch -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700">
+                    <button id="btn-session-1" onclick="setSessionMode(1)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-accentBlue text-slate-900 shadow-sm">
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i> Sesi 1: Beli Sahaja
+                    </button>
+                    <button id="btn-session-2" onclick="setSessionMode(2)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Sesi 2: Beli & Refund (80%)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Tab Navigation -->
+            <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn active px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-accentBlue text-slate-900 shadow-md transition-all">
+                    <i data-lucide="shopping-bag" class="w-4 h-4"></i> Store POS
+                </button>
+                <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all">
+                    <i data-lucide="trophy" class="w-4 h-4"></i> Leaderboard
+                </button>
+                <button onclick="switchTab('badges')" id="tab-badges" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i> Lencana QR
+                </button>
+                <button onclick="switchTab('setup')" id="tab-setup" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all">
+                    <i data-lucide="settings" class="w-4 h-4"></i> Store Setting & Sync
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
+
+        <!-- ================= TAB 1: POS STOREFRONT ================= -->
+        <section id="sec-pos" class="tab-content grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left 7 Cols: Material Inventory Catalog -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                
+                <!-- Filter & Search Controls -->
+                <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div class="relative w-full sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+                        <input type="text" id="pos-search" oninput="renderInventory()" placeholder="Cari bahan..." class="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-2xl text-xs font-semibold border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accentBlue">
+                    </div>
+                    <div id="category-pills" class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                        <!-- Category pills rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Catalog Grid -->
+                <div id="inventory-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[calc(100vh-240px)] overflow-y-auto pr-1">
+                    <!-- Inventory cards injected via JS -->
+                </div>
+            </div>
+
+            <!-- Right 5 Cols: Team Selection, Live Camera QR & Checkout -->
+            <div class="lg:col-span-5 flex flex-col gap-4">
+                
+                <!-- Team Active Card -->
+                <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="credit-card" class="w-5 h-5 text-accentBlue"></i>
+                            <h2 class="font-bold text-sm text-slate-800">Pasukan Pembeli (63 Pasukan)</h2>
+                        </div>
+                        <button onclick="toggleScanner()" class="px-3 py-1.5 bg-accentPurple/15 text-accentPurple rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-accentPurple/25 transition-colors">
+                            <i data-lucide="camera" class="w-3.5 h-3.5"></i> Imbas Lencana QR
+                        </button>
+                    </div>
+
+                    <!-- Live Camera Scanner Box -->
+                    <div id="scanner-wrapper" class="hidden p-4 bg-spaceNav text-white rounded-2xl flex flex-col items-center gap-3">
+                        <div id="qr-reader" class="w-full max-w-[260px] rounded-xl overflow-hidden border-2 border-accentGreen"></div>
+                        <p class="text-[11px] text-slate-300 text-center">Halakan kamera pada Kod QR Lencana Misi Pasukan.</p>
+                    </div>
+
+                    <!-- Manual Team Dropdown -->
+                    <select id="team-select" onchange="changeSelectedTeam(this.value)" class="w-full px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-accentBlue">
+                        <!-- 63 Teams injected via JS -->
+                    </select>
+
+                    <!-- Financial Summary Badge -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Baki MTX Terkini</span>
+                            <p id="team-balance-display" class="text-xl font-black text-accentGreen font-orbitron">1000 <span class="text-xs font-sans font-bold">MTX</span></p>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Bersih Belanja</span>
+                            <p id="team-spent-display" class="text-xl font-black text-slate-800 font-orbitron">0 <span class="text-xs font-sans font-bold">MTX</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Mode (Purchase vs Refund) -->
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+                        <button id="mode-purchase-btn" onclick="setPosMode('purchase')" class="py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-accentBlue text-slate-900 shadow-sm">
+                            <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> 🟢 Pembelian
+                        </button>
+                        <button id="mode-refund-btn" onclick="setPosMode('refund')" class="py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 🔴 Pemulangan (80%)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Shopping Cart & Checkout -->
+                <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <h3 class="font-bold text-xs text-slate-800 flex items-center gap-2">
+                                <span>Troli Barangan</span>
+                                <span id="cart-item-count" class="px-2 py-0.5 rounded-full bg-accentBlue/20 text-blue-700 text-[11px] font-black">0 items</span>
+                            </h3>
+                            <button onclick="clearCart()" class="text-xs text-slate-400 hover:text-accentRed font-bold flex items-center gap-1">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Kosongkan
+                            </button>
+                        </div>
+
+                        <!-- Cart Items Scroll -->
+                        <div id="cart-items-container" class="divide-y divide-slate-50 max-h-52 overflow-y-auto my-2 pr-1">
+                            <!-- Items injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Total & Checkout Action -->
+                    <div class="pt-4 border-t border-slate-100 flex flex-col gap-3">
+                        <div id="refund-summary-box" class="hidden space-y-1 bg-accentPurple/10 p-3 rounded-2xl text-xs font-semibold text-accentPurple">
+                            <div class="flex justify-between"><span>Nilai Asal:</span><span id="refund-raw-total">0 MTX</span></div>
+                            <div class="flex justify-between text-accentRed"><span>Caj Restocking (20%):</span><span id="refund-fee">-0 MTX</span></div>
+                            <div class="flex justify-between font-black text-sm text-emerald-600 pt-1 border-t border-accentPurple/20"><span>Kredit Diberikan (80%):</span><span id="refund-final-credit">+0 MTX</span></div>
+                        </div>
+
+                        <div id="purchase-summary-box" class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400">JUMLAH TRANSAKSI</span>
+                            <span class="text-2xl font-black text-slate-800 font-orbitron"><span id="cart-total-display">0</span> <span class="text-xs font-sans">MTX</span></span>
+                        </div>
+
+                        <button id="checkout-btn" onclick="executeCheckout()" disabled class="w-full py-3.5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-md bg-slate-200 text-slate-400 cursor-not-allowed transition-all">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i> Sahkan Transaksi
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: LIVE LEADERBOARD ================= -->
+        <section id="sec-leaderboard" class="tab-content hidden flex flex-col gap-5">
+            
+            <!-- Controls Bar -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                        <i data-lucide="trophy" class="w-5 h-5 text-accentYellow"></i> Live Financial Leaderboard (63 Pasukan)
+                    </h2>
+                    <p class="text-xs text-slate-400">Papan pemuka kedudukan kewangan & efisiensi perbelanjaan 63 pasukan secara langsung.</p>
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <!-- Privacy Toggle Button -->
+                    <button onclick="togglePrivacyMode()" id="privacy-toggle-btn" class="px-4 py-2 bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 hover:bg-black transition-colors">
+                        <i data-lucide="eye-off" class="w-4 h-4"></i> Mod Projektor Awam: AKTIF
+                    </button>
+
+                    <div class="relative w-full sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+                        <input type="text" id="leaderboard-search" oninput="renderLeaderboard()" placeholder="Cari Pasukan / Sekolah..." class="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-2xl text-xs font-semibold border border-slate-200 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Warning Banner -->
+            <div id="privacy-banner" class="hidden bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl text-xs text-emerald-800 font-bold flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                <span>Mod Projektor Awam Aktif: Butiran barangan spesifik disembunyikan untuk menjaga rahsia strategi bahan setiap pasukan.</span>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th class="py-3.5 px-6">Kedudukan</th>
+                                <th class="py-3.5 px-4">ID Pasukan</th>
+                                <th class="py-3.5 px-4">Sekolah</th>
+                                <th class="py-3.5 px-4 text-center">Modal Awal</th>
+                                <th class="py-3.5 px-4 text-center">Belanja Bersih</th>
+                                <th class="py-3.5 px-4 text-center">Baki Terkini</th>
+                                <th class="py-3.5 px-4 text-center">Efisiensi ROI</th>
+                                <th class="py-3.5 px-6 text-right">Log Audit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-tbody" class="divide-y divide-slate-50 font-medium">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: MISSION BADGE GENERATOR ================= -->
+        <section id="sec-badges" class="tab-content hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div>
+                    <h2 class="text-base font-black text-slate-800">Penjana Lencana Misi QR</h2>
+                    <p class="text-xs text-slate-400">Pilih pasukan (1-63) untuk menjana lencana fizikal rasmi berkod QR.</p>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-slate-600">Pilih Pasukan:</label>
+                    <select id="badge-team-select" onchange="renderBadgeCard(this.value)" class="w-full px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800">
+                        <!-- Options injected via JS -->
+                    </select>
+                </div>
+
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-2">
+                    <p class="font-bold text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4 text-accentBlue"></i> Petua Cetakan Lencana:
+                    </p>
+                    <ul class="list-disc pl-4 space-y-1 text-[11px]">
+                        <li>Cetak menggunakan Kertas Tebal / Art Card.</li>
+                        <li>Gunting dan masukkan ke dalam sarung lanyard bersaiz standard.</li>
+                        <li>Kod QR mengandungi ID Pasukan unik untuk diimbas di kaunter kedai.</li>
+                    </ul>
+                </div>
+
+                <button onclick="window.print()" class="w-full py-3.5 bg-spaceNav text-white rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Cetak Lencana Pasukan Ini
+                </button>
+            </div>
+
+            <!-- Printable Badge Canvas Container -->
+            <div class="lg:col-span-8 flex items-center justify-center p-8 bg-slate-100 rounded-3xl border border-slate-200 min-h-[420px]">
+                <div id="printable-badge-area">
+                    <!-- NASA / SpaceX Style Badge Template -->
+                    <div id="badge-card" class="w-[300px] bg-gradient-to-b from-spaceNav via-slate-900 to-black text-white rounded-3xl p-6 shadow-2xl border-4 border-accentBlue flex flex-col items-center justify-between text-center relative overflow-hidden">
+                        
+                        <div class="w-10 h-2.5 bg-slate-700/80 rounded-full border border-slate-500 mb-2"></div>
+
+                        <div class="w-full flex items-center justify-between pb-3 border-b border-slate-800">
+                            <div class="text-left">
+                                <span class="text-[8px] font-black tracking-widest text-accentGreen uppercase font-orbitron">MALAYSIA TECHLYMPICS</span>
+                                <h4 class="text-[11px] font-black text-white font-orbitron tracking-tight">OFF-EARTH ENGINEERING</h4>
+                            </div>
+                            <i data-lucide="sparkles" class="w-4 h-4 text-accentYellow"></i>
+                        </div>
+
+                        <div class="my-4 flex flex-col items-center">
+                            <span id="badge-id" class="px-3 py-1 rounded-full bg-accentBlue/20 text-accentBlue border border-accentBlue/40 text-xs font-mono font-black tracking-wider mb-2">
+                                TEAM-01
+                            </span>
+                            <h3 id="badge-name" class="text-lg font-black text-white">INSANE 2.0</h3>
+                            <p id="badge-school" class="text-[11px] text-slate-400 max-w-[200px] mt-1 line-clamp-2">SEKOLAH MENENGAH KEBANGSAAN BANDAR T6</p>
+                        </div>
+
+                        <!-- Dynamic QR Code Target -->
+                        <div class="p-3 bg-white rounded-2xl border-2 border-accentGreen shadow-inner flex flex-col items-center gap-1.5">
+                            <div id="badge-qrcode-box"></div>
+                            <span class="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest">OFFICIAL STORE LEDGER QR</span>
+                        </div>
+
+                        <div class="w-full mt-4 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                            <span>MISSION AUTHORIZED</span>
+                            <span class="text-accentGreen">OFFICIAL BADGE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: STORE SETTING & GOOGLE SHEETS SYNC ================= -->
+        <section id="sec-setup" class="tab-content hidden flex flex-col gap-6">
+            
+            <!-- Google Sheets Connection Settings -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                            <i data-lucide="cloud" class="w-5 h-5 text-accentBlue"></i> Sambungan Google Sheets (Multi-Laptop Cloud Sync)
+                        </h2>
+                        <p class="text-xs text-slate-400">Masukkan URL Google Apps Script Web App untuk memastikan transaksi berbilang komputer disegerakkan secara langsung di GitHub Pages.</p>
+                    </div>
+                    <button onclick="openGasModal()" class="px-4 py-2 bg-accentPurple/15 text-accentPurple rounded-2xl text-xs font-bold hover:bg-accentPurple/25 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i> Cara Setup Google Script
+                    </button>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-accentBlue">
+                    <button onclick="saveAndTestGasUrl()" class="w-full sm:w-auto px-6 py-3 bg-accentBlue text-slate-900 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-blue-400 transition-all whitespace-nowrap">
+                        <i data-lucide="check" class="w-4 h-4"></i> Sambung & Sync
+                    </button>
+                </div>
+            </div>
+
+            <!-- Initial Budget Adjuster Control -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div>
+                    <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                        <i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-600"></i> Tetapan Bajet Awal Pasukan (MTX)
+                    </h2>
+                    <p class="text-xs text-slate-400">Laraskan modal permulaan untuk kesemua 63 pasukan serentak.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <input type="number" id="budget-input" value="1000" min="100" max="10000" step="50" onchange="updateInitialBudget(this.value)" class="w-36 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-sm font-black font-orbitron text-center text-slate-800 focus:outline-none">
+                    <span class="text-xs font-bold text-slate-500">MTX</span>
+                </div>
+            </div>
+
+            <!-- Store Setting & Management (Add/Edit/Remove items & pricing) -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                            <i data-lucide="package" class="w-5 h-5 text-accentYellow"></i> Store Setting & Management (Katalog Bahan)
+                        </h2>
+                        <p class="text-xs text-slate-400">Tambah item baru, kemaskini harga, tukar kategori, atau padam bahan dari kedai.</p>
+                    </div>
+                    <button onclick="openAddItemModal()" class="px-4 py-2 bg-emerald-500 text-white rounded-2xl text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Tambah Bahan Baru
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto mt-2">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th class="py-3 px-3">Ikon</th>
+                                <th class="py-3 px-3">Nama Bahan</th>
+                                <th class="py-3 px-3">Kategori</th>
+                                <th class="py-3 px-3 text-center">Harga (MTX)</th>
+                                <th class="py-3 px-3">Unit Saiz</th>
+                                <th class="py-3 px-3 text-right">Tindakan Kedai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="setup-inventory-tbody" class="divide-y divide-slate-50">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Data Export & Reset -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-black text-slate-800">Eksport & Sandaran Data (Offline)</h2>
+                    <p class="text-xs text-slate-400">Simpan fail JSON atau set semula semua transaksi.</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button onclick="exportDataJSON()" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors">
+                        <i data-lucide="download" class="w-4 h-4"></i> Eksport Ledger (JSON)
+                    </button>
+                    <button onclick="resetAllTransactions()" class="w-full sm:w-auto px-4 py-2.5 bg-rose-50 text-rose-700 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-rose-100 transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Transaksi
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Audit Log Detail -->
+    <div id="audit-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white max-w-xl w-full rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 max-h-[80vh] overflow-hidden">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                    <h3 id="modal-team-title" class="font-black text-sm text-slate-800">Log Transaksi: TEAM-01</h3>
+                    <p class="text-xs text-slate-400">Sejarah terperinci perbelanjaan dan pemulangan</p>
+                </div>
+                <button onclick="closeAuditModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold hover:bg-slate-200">✕</button>
+            </div>
+            <div id="modal-tx-list" class="overflow-y-auto flex-1 divide-y divide-slate-100 pr-1">
+                <!-- Log entries injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit Inventory Item (Store Setting) -->
+    <div id="item-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 id="item-modal-title" class="font-black text-sm text-slate-800">Tambah Bahan Baru</h3>
+                <button onclick="closeItemModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold hover:bg-slate-200">✕</button>
+            </div>
+            <div class="space-y-3">
+                <input type="hidden" id="edit-item-id">
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Nama Bahan:</label>
+                    <input type="text" id="modal-item-name" class="w-full mt-1 px-3 py-2 bg-slate-50 rounded-xl text-xs font-semibold border border-slate-200 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Kategori:</label>
+                        <input type="text" id="modal-item-category" class="w-full mt-1 px-3 py-2 bg-slate-50 rounded-xl text-xs font-semibold border border-slate-200 focus:outline-none" placeholder="Struktur / Unik">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Harga (MTX):</label>
+                        <input type="number" id="modal-item-price" class="w-full mt-1 px-3 py-2 bg-slate-50 rounded-xl text-xs font-semibold border border-slate-200 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Unit Saiz:</label>
+                        <input type="text" id="modal-item-unit" class="w-full mt-1 px-3 py-2 bg-slate-50 rounded-xl text-xs font-semibold border border-slate-200 focus:outline-none" placeholder="keping / paket">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Ikon Emoji:</label>
+                        <input type="text" id="modal-item-icon" class="w-full mt-1 px-3 py-2 bg-slate-50 rounded-xl text-xs font-semibold border border-slate-200 focus:outline-none" placeholder="📦">
+                    </div>
+                </div>
+            </div>
+            <div class="pt-2 flex gap-2">
+                <button onclick="closeItemModal()" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveInventoryItem()" class="w-1/2 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-600">Simpan Bahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Google Apps Script Setup Guide -->
+    <div id="gas-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white max-w-2xl w-full rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 max-h-[85vh] overflow-hidden">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="font-black text-sm text-slate-800 flex items-center gap-2">
+                    <i data-lucide="cloud" class="w-4 h-4 text-accentBlue"></i> Panduan Setup Google Sheets Apps Script
+                </h3>
+                <button onclick="closeGasModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold hover:bg-slate-200">✕</button>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-4 text-xs text-slate-600 pr-1">
+                <div class="space-y-1">
+                    <p class="font-bold text-slate-800">Langkah 1: Buka Google Sheet</p>
+                    <p>Buka fail Google Sheet baru di <a href="https://sheets.new" target="_blank" class="text-accentBlue underline">sheets.new</a>.</p>
+                </div>
+                <div class="space-y-1">
+                    <p class="font-bold text-slate-800">Langkah 2: Buka Apps Script Editor</p>
+                    <p>Di menu atas Google Sheet, klik <b>Extensions > Apps Script</b>.</p>
+                </div>
+                <div class="space-y-1">
+                    <p class="font-bold text-slate-800">Langkah 3: Masukkan Kod Di Bawah</p>
+                    <p>Padam semua kod sedia ada di dalam editor dan salin kod Google Apps Script (GAS) ini:</p>
+                    <div class="relative">
+                        <textarea readonly class="w-full h-36 p-3 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded-xl focus:outline-none">function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = {
+    inventory: getSheetData(ss.getSheetByName("Inventory")),
+    transactions: getSheetData(ss.getSheetByName("Transactions")),
+    settings: getSheetData(ss.getSheetByName("Settings"))
+  };
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var body = JSON.parse(e.postData.contents);
+  var action = body.action;
+  
+  if (action === "saveTransaction") {
+    var sheet = ss.getSheetByName("Transactions") || ss.insertSheet("Transactions");
+    if (sheet.getLastRow() === 0) sheet.appendRow(["id", "timestamp", "teamId", "session", "type", "items", "totalAmount"]);
+    sheet.appendRow([body.tx.id, body.tx.timestamp, body.tx.teamId, body.tx.session, body.tx.type, JSON.stringify(body.tx.items), body.tx.totalAmount]);
+  } else if (action === "saveInventory") {
+    var sheet = ss.getSheetByName("Inventory") || ss.insertSheet("Inventory");
+    sheet.clear();
+    sheet.appendRow(["id", "name", "category", "price", "unit", "icon"]);
+    body.inventory.forEach(function(item) {
+      sheet.appendRow([item.id, item.name, item.category, item.price, item.unit, item.icon]);
+    });
+  } else if (action === "saveSettings") {
+    var sheet = ss.getSheetByName("Settings") || ss.insertSheet("Settings");
+    sheet.clear();
+    sheet.appendRow(["key", "value"]);
+    sheet.appendRow(["initialBudget", body.initialBudget]);
+  }
+  return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheetData(sheet) {
+  if (!sheet) return [];
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  var headers = rows[0];
+  var result = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) { obj[headers[j]] = rows[i][j]; }
+    result.push(obj);
+  }
+  return result;
+}</textarea>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <p class="font-bold text-slate-800">Langkah 4: Deploy sebagai Web App</p>
+                    <p>Klik butang <b>Deploy > New deployment</b> di penjuru kanan atas. Pilih jenis <b>Web app</b>. Pada <i>Execute as</i> pilih <b>Me</b>, dan pada <i>Who has access</i> pilih <b>Anyone</b>. Klik Deploy, salin URL web app yang diberikan dan tampal ke ruangan tetapan utama di aplikasi ini!</p>
+                </div>
+            </div>
+            <div class="pt-2">
+                <button onclick="closeGasModal()" class="w-full py-2.5 bg-spaceNav text-white rounded-xl text-xs font-bold">Faham & Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // --- INITIAL DEFAULT DATA ---
+        const DEFAULT_INVENTORY = [
+            { id: 'item-1', name: 'Papan Beralun (Corrugated Board)', category: 'Struktur', price: 120, unit: 'keping (30x30cm)', icon: '📦' },
+            { id: 'item-2', name: 'Kadbod Hardboard (Cardboard)', category: 'Struktur', price: 90, unit: 'keping (30x30cm)', icon: '📄' },
+            { id: 'item-3', name: 'Botol Plastik 500ml', category: 'Struktur', price: 50, unit: 'botol', icon: '🍾' },
+            { id: 'item-4', name: 'Rod Gabus (Foam Rod)', category: 'Struktur', price: 40, unit: 'batang (30cm)', icon: '🥖' },
+            { id: 'item-5', name: 'Lidi Sate Kualiti Tinggi', category: 'Kerangka', price: 30, unit: 'paket (10 pcs)', icon: '🥢' },
+            { id: 'item-6', name: 'Batang Aiskrim Besar', category: 'Kerangka', price: 35, unit: 'paket (10 pcs)', icon: '🪵' },
+            { id: 'item-7', name: 'Batang Aiskrim Kecil', category: 'Kerangka', price: 25, unit: 'paket (10 pcs)', icon: '✏️' },
+            { id: 'item-8', name: 'Straw Plastik Kebal', category: 'Kerangka', price: 20, unit: 'paket (10 pcs)', icon: '🥤' },
+            { id: 'item-9', name: 'Tali Tangsi (Fishing Line)', category: 'Unik', price: 60, unit: 'gulung (5m)', icon: '🧵' },
+            { id: 'item-10', name: 'Span Basuh Pinggan (Sponge)', category: 'Unik', price: 45, unit: 'unit', icon: '🧽' },
+            { id: 'item-11', name: 'Bebola Kapas (Cotton Balls)', category: 'Unik', price: 35, unit: 'paket (10 pcs)', icon: '☁️' },
+            { id: 'item-12', name: 'Kerajang Aluminium (Foil)', category: 'Unik', price: 50, unit: 'gulung (1m)', icon: '✨' },
+            { id: 'item-13', name: 'Buih EVA (EVA Foam Sheet)', category: 'Unik', price: 70, unit: 'keping (A4)', icon: '🟫' },
+            { id: 'item-14', name: 'Batang Glu Panas (Glue Stick)', category: 'Pelekat', price: 15, unit: 'batang', icon: '🕯️' },
+            { id: 'item-15', name: 'Kabel Pengikat (Cable Tie)', category: 'Pelekat', price: 25, unit: 'paket (10 pcs)', icon: '🔗' },
+            { id: 'item-16', name: 'Pita Pelekat Kertas (Masking Tape)', category: 'Pelekat', price: 40, unit: 'gulung', icon: '🏷️' },
+            { id: 'item-17', name: 'Kertas Pasir #120 (Sandpaper)', category: 'Alat', price: 20, unit: 'keping (A4)', icon: '📜' },
+            { id: 'item-18', name: 'Picagari 20ml (Syringe)', category: 'Mekanikal', price: 50, unit: 'unit', icon: '💉' },
+            { id: 'item-19', name: 'Tiub Silikon (Silicone Tube)', category: 'Mekanikal', price: 30, unit: 'tiub (30cm)', icon: '🪠' },
+            { id: 'item-20', name: 'Magnet Neodymium (x2)', category: 'Mekanikal', price: 65, unit: 'pasang', icon: '🧲' }
+        ];
+
+        // 63 Teams Setup (WEC)
+        const TEAMS = [
+            { id: 'TEAM-01', name: "INSANE 2.0", school: "SEKOLAH MENENGAH KEBANGSAAN BANDAR T6" },
+            { id: 'TEAM-02', name: "SEMINDA 033", school: "SEKOLAH MENENGAH KEBANGSAAN INDAHPURA 1" },
+            { id: 'TEAM-03', name: "Sukses06", school: "SEKOLAH MENENGAH KEBANGSAAN SERI KENANGAN" },
+            { id: 'TEAM-04', name: "STaR2 WEC 3B", school: "SEKOLAH MENENGAH KEBANGSAAN TAMAN RINTING 2" },
+            { id: 'TEAM-05', name: "ZENTLIX", school: "MRSM MERBOK" },
+            { id: 'TEAM-06', name: "RED SENTINEL FORCE", school: "SEKOLAH MENENGAH KEBANGSAAN AIR MERAH" },
+            { id: 'TEAM-07', name: "STEMHAZE_ASP", school: "SEKOLAH MENENGAH SAINS PENDANG" },
+            { id: 'TEAM-08', name: "HELLO KITTY", school: "SEKOLAH MENENGAH KEBANGSAAN KAMPONG CHENGAL" },
+            { id: 'TEAM-09', name: "QBEMZ INVICTUS", school: "SEKOLAH MENENGAH KEBANGSAAN KUBANG BEMBAN" },
+            { id: 'TEAM-10', name: "SMT WEC A", school: "SEKOLAH MENENGAH KEBANGSAAN TUMPAT" },
+            { id: 'TEAM-11', name: "Wakafian WEC A", school: "SEKOLAH MENENGAH KEBANGSAAN WAKAF BHARU" },
+            { id: 'TEAM-12', name: "ARSY INNOVATORS", school: "SEKOLAH MENENGAH KEBANGSAAN DATO' ABDUL RAHMAN YA'KUB" },
+            { id: 'TEAM-13', name: "PERSES BUILDER TEAM", school: "SEKOLAH MENENGAH KEBANGSAAN PERNU" },
+            { id: 'TEAM-14', name: "David_Brain Cell", school: "SEKOLAH MENENGAH KEBANGSAAN TINGGI ST DAVID" },
+            { id: 'TEAM-15', name: "Mega Builders", school: "SEKOLAH MENENGAH SAINS MUZAFFAR SHAH" },
+            { id: 'TEAM-16', name: "SDAR ERA", school: "SEKOLAH MENENGAH DATUK ABDUL RAZAK" },
+            { id: 'TEAM-17', name: "INNOVERSE", school: "SEKOLAH MENENGAH KEBANGSAAN BATU KIKIR" },
+            { id: 'TEAM-18', name: "QUADNOVA", school: "SEKOLAH MENENGAH KEBANGSAAN PANCHOR" },
+            { id: 'TEAM-19', name: "SMKSA ROLLERBLADE", school: "SEKOLAH MENENGAH KEBANGSAAN SERI AMPANGAN" },
+            { id: 'TEAM-20', name: "DUNIA SASER 1", school: "SEKOLAH MENENGAH SAINS TUANKU MUNAWIR" },
+            { id: 'TEAM-21', name: "SUPERB WEC 3", school: "SEKOLAH MENENGAH AGAMA PERSEKUTUAN BENTONG" },
+            { id: 'TEAM-22', name: "ECO-BOTS", school: "SEKOLAH MENENGAH KEBANGSAAN BENTONG" },
+            { id: 'TEAM-23', name: "SEMENDORA 6", school: "SEKOLAH MENENGAH KEBANGSAAN DONG" },
+            { id: 'TEAM-24', name: "SPEKIY", school: "SEKOLAH MENENGAH KEBANGSAAN (FELDA) PURUN" },
+            { id: 'TEAM-25', name: "Sukses Alpha", school: "SEKOLAH MENENGAH KEBANGSAAN SULAIMAN" },
+            { id: 'TEAM-26', name: "Hydroblaze Roarz", school: "SEKOLAH MENENGAH KEBANGSAAN AMINUDDIN BAKI" },
+            { id: 'TEAM-27', name: "SEJATI ELITES", school: "SEKOLAH MENENGAH KEBANGSAAN JALAN TASEK" },
+            { id: 'TEAM-28', name: "Overnight", school: "SEKOLAH MENENGAH KEBANGSAAN PROTON CITY" },
+            { id: 'TEAM-29', name: "ARKINE", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA (P) ALAWIYAH" },
+            { id: 'TEAM-30', name: "WEC SEMEKSAH 3", school: "SEKOLAH MENENGAH KEBANGSAAN SYED AHMAD" },
+            { id: 'TEAM-31', name: "WEC SEMEKSAH 6", school: "SEKOLAH MENENGAH KEBANGSAAN SYED AHMAD" },
+            { id: 'TEAM-32', name: "TECH TITANS", school: "SEKOLAH MENENGAH KEBANGSAAN TUANKU LAILATUL SHAHREEN" },
+            { id: 'TEAM-33', name: "SpaceMinds", school: "SMA AL MADRASAH AL ALAWIYAH AD DINIAH" },
+            { id: 'TEAM-34', name: "TRANSTECH 22", school: "MRSM TRANSKRIAN" },
+            { id: 'TEAM-35', name: "ROBOFORCE", school: "SEKOLAH MENENGAH KEBANGSAAN PENANTI" },
+            { id: 'TEAM-36', name: "ATHENA", school: "SEKOLAH MENENGAH KEBANGSAAN PERMATANG PASIR" },
+            { id: 'TEAM-37', name: "CRYONOVA", school: "MRSM TUN MUSTAPHA TAWAU" },
+            { id: 'TEAM-38', name: "ASTRAVIA", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA TUN AHMADSHAH" },
+            { id: 'TEAM-39', name: "Amethyst", school: "SEKOLAH MENENGAH KEBANGSAAN BUKIT GARAM" },
+            { id: 'TEAM-40', name: "de-novators", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA SIBU (S)" },
+            { id: 'TEAM-41', name: "SCIENCERONS", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA SIBU (S)" },
+            { id: 'TEAM-42', name: "Go PeKA", school: "SEKOLAH MENENGAH KEBANGSAAN ROSLI DHOBY" },
+            { id: 'TEAM-43', name: "Lukean Northern Lights", school: "SEKOLAH MENENGAH KEBANGSAAN ST LUKE" },
+            { id: 'TEAM-44', name: "JJLM", school: "SEKOLAH MENENGAH JENIS KEBANGSAAN CHUNG HWA" },
+            { id: 'TEAM-45', name: "TABURA WEC1", school: "SEKOLAH MENENGAH KEBANGSAAN TAMAN BUNGA RAYA (1)" },
+            { id: 'TEAM-46', name: "ASTRO GUARDIAN X", school: "SEKOLAH MENENGAH SAINS BANTING" },
+            { id: 'TEAM-47', name: "JOBYMI", school: "SEKOLAH MENENGAH SAINS BANTING" },
+            { id: 'TEAM-48', name: "TECHTRICHALS", school: "SEKOLAH MENENGAH SAINS BANTING" },
+            { id: 'TEAM-49', name: "CREOVA IKT", school: "SEKOLAH MENENGAH IMTIAZ YAYASAN TERENGGANU-KUALA TERENGGANU" },
+            { id: 'TEAM-50', name: "Semarak WEC-1", school: "SEKOLAH MENENGAH KEBANGSAAN RASAU KERTEH B5" },
+            { id: 'TEAM-51', name: "Barian Genius", school: "SEKOLAH MENENGAH KEBANGSAAN TENGKU BARIAH" },
+            { id: 'TEAM-52', name: "NOVA-TECH", school: "SEKOLAH MENENGAH KEBANGSAAN BANDAR TASIK SELATAN" },
+            { id: 'TEAM-53', name: "MUSANG KING", school: "SEKOLAH MENENGAH KEBANGSAAN SEGAMBUT JAYA" },
+            { id: 'TEAM-54', name: "JAZARI", school: "SMA KUALA LUMPUR" },
+            { id: 'TEAM-55', name: "INNERSYNC", school: "SMA MAJLIS AGAMA ISLAM WILAYAH PERSEKUTUAN" },
+            { id: 'TEAM-56', name: "THE LAB RATS", school: "SEKOLAH MENENGAH KEBANGSAAN LABUAN" },
+            { id: 'TEAM-57', name: "PowerofFour", school: "SEKOLAH MENENGAH KEBANGSAAN PANTAI" },
+            { id: 'TEAM-58', name: "TECHLETUBBIES", school: "SEKOLAH MENENGAH KEBANGSAAN ST ANNE" },
+            { id: 'TEAM-59', name: "WEC DIY KITS", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA PUTRAJAYA" },
+            { id: 'TEAM-60', name: "WEC Kejuruteraan 2", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA PUTRAJAYA" },
+            { id: 'TEAM-61', name: "WEC TECHRRIOR", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA PUTRAJAYA" },
+            { id: 'TEAM-62', name: "SAS CODE TETRA", school: "SEKOLAH SULTAN ALAM SHAH" },
+            { id: 'TEAM-63', name: "SAS TechForge", school: "SEKOLAH SULTAN ALAM SHAH" }
+        ];
+
+        // App States
+        let sessionMode = 1; 
+        let posMode = 'purchase'; 
+        let selectedTeamId = 'TEAM-01';
+        let cart = [];
+        let filterCategory = 'All';
+        let privacyMode = false;
+        let html5QrCodeScanner = null;
+
+        // Local & Cloud State
+        let initialBudget = parseInt(localStorage.getItem('techlympics_budget_v2.5') || '1000');
+        let inventory = JSON.parse(localStorage.getItem('techlympics_inventory_v2.5') || JSON.stringify(DEFAULT_INVENTORY));
+        let transactions = JSON.parse(localStorage.getItem('techlympics_transactions_v2.5') || '[]');
+        let gasUrl = localStorage.getItem('techlympics_gas_url_v2.5') || '';
+
+        // --- INIT ON LOAD ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            document.getElementById('budget-input').value = initialBudget;
+            document.getElementById('gas-url-input').value = gasUrl;
+
+            populateTeamSelects();
+            renderCategories();
+            renderInventory();
+            updateTeamFinancialDisplay();
+            renderBadgeCard('TEAM-01');
+            renderSetupInventory();
+
+            if (gasUrl) {
+                await syncWithGoogleSheet(true);
+            }
+        });
+
+        // --- TOAST NOTIFICATION ---
+        function notify(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+
+            toastMsg.innerText = msg;
+            toast.className = `fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl border text-xs font-bold flex items-center gap-3 transition-all duration-300 ${
+                type === 'error' ? 'bg-rose-500 text-white border-rose-600' : 'bg-emerald-500 text-white border-emerald-600'
+            }`;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+        }
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-accentBlue', 'text-slate-900', 'shadow-md');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+
+            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+            activeBtn.classList.add('bg-accentBlue', 'text-slate-900', 'shadow-md');
+
+            if (tabId === 'leaderboard') renderLeaderboard();
+            if (tabId === 'badges') renderBadgeCard(document.getElementById('badge-team-select').value);
+            if (tabId === 'setup') renderSetupInventory();
+        }
+
+        // --- SESSION MODE SWITCH ---
+        function setSessionMode(mode) {
+            sessionMode = mode;
+            const btn1 = document.getElementById('btn-session-1');
+            const btn2 = document.getElementById('btn-session-2');
+
+            if (mode === 1) {
+                btn1.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-accentBlue text-slate-900 shadow-sm";
+                btn2.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+                setPosMode('purchase');
+            } else {
+                btn2.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-accentPurple text-white shadow-sm";
+                btn1.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+            }
+        }
+
+        // --- FINANCIAL CALCULATIONS ---
+        function getTeamStats(teamId) {
+            const teamTx = transactions.filter(t => t.teamId === teamId);
+            let totalSpent = 0;
+            let totalRefunded = 0;
+
+            teamTx.forEach(t => {
+                if (t.type === 'PURCHASE') totalSpent += t.totalAmount;
+                if (t.type === 'REFUND') totalRefunded += t.totalAmount;
+            });
+
+            const netSpent = totalSpent - totalRefunded;
+            const remainingBalance = initialBudget - netSpent;
+            const roiEfficiency = ((remainingBalance / initialBudget) * 100).toFixed(1);
+
+            return { totalSpent, totalRefunded, netSpent, remainingBalance, roiEfficiency };
+        }
+
+        // --- TEAM SELECTORS POPULATE ---
+        function populateTeamSelects() {
+            const mainSelect = document.getElementById('team-select');
+            const badgeSelect = document.getElementById('badge-team-select');
+            
+            mainSelect.innerHTML = '';
+            badgeSelect.innerHTML = '';
+
+            TEAMS.forEach(t => {
+                const opt1 = document.createElement('option');
+                opt1.value = t.id;
+                opt1.textContent = `${t.id} - ${t.name} (${t.school})`;
+                mainSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = t.id;
+                opt2.textContent = `${t.id} - ${t.name}`;
+                badgeSelect.appendChild(opt2);
+            });
+        }
+
+        function changeSelectedTeam(teamId) {
+            selectedTeamId = teamId;
+            updateTeamFinancialDisplay();
+        }
+
+        function updateTeamFinancialDisplay() {
+            const stats = getTeamStats(selectedTeamId);
+            document.getElementById('team-balance-display').innerHTML = `${stats.remainingBalance} <span class="text-xs font-sans font-bold">MTX</span>`;
+            document.getElementById('team-spent-display').innerHTML = `${stats.netSpent} <span class="text-xs font-sans font-bold">MTX</span>`;
+        }
+
+        // --- POS INVENTORY & CART ---
+        function renderCategories() {
+            const cats = ['All', ...new Set(inventory.map(i => i.category))];
+            const container = document.getElementById('category-pills');
+            container.innerHTML = '';
+
+            cats.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    filterCategory === cat ? 'bg-accentBlue text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`;
+                btn.innerText = cat;
+                btn.onclick = () => { filterCategory = cat; renderCategories(); renderInventory(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderInventory() {
+            const grid = document.getElementById('inventory-grid');
+            const search = document.getElementById('pos-search').value.toLowerCase();
+            grid.innerHTML = '';
+
+            const filtered = inventory.filter(i => {
+                const matchesCat = filterCategory === 'All' || i.category === filterCategory;
+                const matchesSearch = i.name.toLowerCase().includes(search);
+                return matchesCat && matchesSearch;
+            });
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-3.5 rounded-3xl border border-slate-200 shadow-sm hover:border-accentBlue transition-all cursor-pointer flex flex-col justify-between group";
+                card.onclick = () => addToCart(item);
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <span class="text-2xl p-2 bg-slate-50 rounded-2xl group-hover:scale-110 transition-transform">${item.icon}</span>
+                        <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-accentYellow text-slate-900 font-orbitron">${item.price} MTX</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">${item.category}</span>
+                        <h4 class="font-bold text-xs text-slate-800 line-clamp-2 leading-tight">${item.name}</h4>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${item.unit}</p>
+                    </div>
+                    <button class="mt-2 w-full py-1 bg-slate-100 group-hover:bg-accentBlue group-hover:text-slate-900 rounded-xl text-xs font-bold text-slate-700 transition-colors">
+                        + Tambah
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function addToCart(item) {
+            const existing = cart.find(c => c.id === item.id);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function updateCartQty(id, delta) {
+            const item = cart.find(c => c.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) cart = cart.filter(c => c.id !== id);
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = [];
+            renderCart();
+        }
+
+        function setPosMode(mode) {
+            if (mode === 'refund' && sessionMode === 1) {
+                notify("Sesi 1 hanya membenarkan pembelian. Pemulangan hanya dibenarkan pada Sesi 2.", "error");
+                return;
+            }
+            posMode = mode;
+            const btnP = document.getElementById('mode-purchase-btn');
+            const btnR = document.getElementById('mode-refund-btn');
+
+            if (mode === 'purchase') {
+                btnP.className = "py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-accentBlue text-slate-900 shadow-sm";
+                btnR.className = "py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
+            } else {
+                btnR.className = "py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-accentRed text-white shadow-sm";
+                btnP.className = "py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            const itemCount = document.getElementById('cart-item-count');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const purchaseBox = document.getElementById('purchase-summary-box');
+            const refundBox = document.getElementById('refund-summary-box');
+
+            container.innerHTML = '';
+            const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+            const rawTotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const refundCredit = Math.round(rawTotal * 0.8);
+
+            itemCount.innerText = `${totalQty} items`;
+
+            if (cart.length === 0) {
+                container.innerHTML = `<p class="py-8 text-center text-xs text-slate-400 font-semibold">Troli kosong.</p>`;
+                checkoutBtn.disabled = true;
+                checkoutBtn.className = "w-full py-3.5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-md bg-slate-200 text-slate-400 cursor-not-allowed transition-all";
+            } else {
+                checkoutBtn.disabled = false;
+                checkoutBtn.className = `w-full py-3.5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-md text-white transition-all ${
+                    posMode === 'purchase' ? 'bg-accentBlue text-slate-900 hover:bg-blue-400' : 'bg-accentRed hover:bg-rose-600'
+                }`;
+
+                cart.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "py-2 flex items-center justify-between text-xs";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span>${item.icon}</span>
+                            <div>
+                                <p class="font-bold text-slate-800 leading-tight">${item.name}</p>
+                                <p class="text-[10px] text-slate-400">${item.price} MTX / unit</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                                <button onclick="updateCartQty('${item.id}', -1)" class="w-4 h-4 bg-white rounded flex items-center justify-center font-bold text-slate-700">-</button>
+                                <span class="w-4 text-center font-bold">${item.qty}</span>
+                                <button onclick="updateCartQty('${item.id}', 1)" class="w-4 h-4 bg-white rounded flex items-center justify-center font-bold text-slate-700">+</button>
+                            </div>
+                            <span class="font-black w-12 text-right font-orbitron">${item.price * item.qty}</span>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            if (posMode === 'refund') {
+                purchaseBox.classList.add('hidden');
+                refundBox.classList.remove('hidden');
+                document.getElementById('refund-raw-total').innerText = `${rawTotal} MTX`;
+                document.getElementById('refund-fee').innerText = `-${rawTotal - refundCredit} MTX`;
+                document.getElementById('refund-final-credit').innerText = `+${refundCredit} MTX`;
+            } else {
+                refundBox.classList.add('hidden');
+                purchaseBox.classList.remove('hidden');
+                document.getElementById('cart-total-display').innerText = rawTotal;
+            }
+        }
+
+        async function executeCheckout() {
+            if (cart.length === 0) return;
+
+            const stats = getTeamStats(selectedTeamId);
+            const rawTotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const finalAmount = posMode === 'purchase' ? rawTotal : Math.round(rawTotal * 0.8);
+
+            if (posMode === 'purchase' && stats.remainingBalance < finalAmount) {
+                notify(`Baki Pasukan ${selectedTeamId} tidak mencukupi (${stats.remainingBalance} MTX wujud)!`, "error");
+                return;
+            }
+
+            const newTx = {
+                id: `TX-${Date.now()}`,
+                timestamp: new Date().toLocaleString('ms-MY'),
+                teamId: selectedTeamId,
+                session: sessionMode,
+                type: posMode.toUpperCase(),
+                items: [...cart],
+                totalAmount: finalAmount,
+            };
+
+            transactions.unshift(newTx);
+            saveDataLocal();
+
+            if (gasUrl) {
+                await postToGoogleSheet('saveTransaction', { tx: newTx });
+            }
+
+            clearCart();
+            updateTeamFinancialDisplay();
+            notify(`Transaksi ${posMode === 'purchase' ? 'Pembelian' : 'Pemulangan'} ${selectedTeamId} Berjaya!`);
+        }
+
+        // --- CAMERA QR SCANNER ---
+        function toggleScanner() {
+            const wrapper = document.getElementById('scanner-wrapper');
+            if (wrapper.classList.contains('hidden')) {
+                wrapper.classList.remove('hidden');
+                startQrScanner();
+            } else {
+                wrapper.classList.add('hidden');
+                stopQrScanner();
+            }
+        }
+
+        function startQrScanner() {
+            html5QrCodeScanner = new Html5Qrcode("qr-reader");
+            html5QrCodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 180, height: 180 } },
+                (decodedText) => {
+                    const matchedTeam = TEAMS.find(t => t.id === decodedText.trim());
+                    if (matchedTeam) {
+                        document.getElementById('team-select').value = matchedTeam.id;
+                        changeSelectedTeam(matchedTeam.id);
+                        notify(`Imbasan QR Berjaya: ${matchedTeam.id}`);
+                        toggleScanner();
+                    }
+                },
+                (errorMessage) => { /* ignore scanning errors */ }
+            ).catch(err => console.error("Camera Error: ", err));
+        }
+
+        function stopQrScanner() {
+            if (html5QrCodeScanner) {
+                html5QrCodeScanner.stop().then(() => html5QrCodeScanner.clear()).catch(err => console.error(err));
+            }
+        }
+
+        // --- LIVE LEADERBOARD ---
+        function togglePrivacyMode() {
+            privacyMode = !privacyMode;
+            const btn = document.getElementById('privacy-toggle-btn');
+            const banner = document.getElementById('privacy-banner');
+
+            if (privacyMode) {
+                btn.innerText = "Mod Projektor Awam: AKTIF";
+                btn.className = "px-4 py-2 bg-emerald-600 text-white rounded-2xl text-xs font-bold flex items-center gap-2";
+                banner.classList.remove('hidden');
+            } else {
+                btn.innerText = "Mod Projektor Awam: AKTIF";
+                btn.className = "px-4 py-2 bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2";
+                banner.classList.add('hidden');
+            }
+            renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboard-tbody');
+            const search = document.getElementById('leaderboard-search').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const list = TEAMS.map(t => ({ ...t, stats: getTeamStats(t.id) }))
+                .filter(t => t.id.toLowerCase().includes(search) || t.name.toLowerCase().includes(search) || t.school.toLowerCase().includes(search))
+                .sort((a, b) => b.stats.remainingBalance - a.stats.remainingBalance);
+
+            list.forEach((t, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-6 font-black font-orbitron">${idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`}</td>
+                    <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-xl bg-slate-800 text-white font-mono font-bold text-[11px]">${t.id}</span></td>
+                    <td class="py-3.5 px-4"><p class="font-bold text-slate-800">${t.name}</p><p class="text-[10px] text-slate-400">${t.school}</p></td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-400">${initialBudget} MTX</td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-800">${t.stats.netSpent} MTX</td>
+                    <td class="py-3.5 px-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 font-orbitron">${t.stats.remainingBalance} MTX</span></td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-600">${t.stats.roiEfficiency}%</td>
+                    <td class="py-3.5 px-6 text-right">
+                        ${privacyMode 
+                            ? `<span class="text-[10px] text-slate-400 italic">Disembunyikan</span>`
+                            : `<button onclick="openAuditModal('${t.id}')" class="px-3 py-1 bg-slate-100 hover:bg-accentBlue hover:text-slate-900 rounded-xl text-[11px] font-bold transition-colors">Audit</button>`
+                        }
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- BADGE GENERATOR ---
+        function renderBadgeCard(teamId) {
+            const team = TEAMS.find(t => t.id === teamId) || TEAMS[0];
+            document.getElementById('badge-id').innerText = team.id;
+            document.getElementById('badge-name').innerText = team.name;
+            document.getElementById('badge-school').innerText = team.school;
+
+            const box = document.getElementById('badge-qrcode-box');
+            box.innerHTML = '';
+            new QRCode(box, { text: team.id, width: 110, height: 110, colorDark: "#0F172A", colorLight: "#FFFFFF" });
+        }
+
+        // --- AUDIT MODAL ---
+        function openAuditModal(teamId) {
+            document.getElementById('modal-team-title').innerText = `Log Transaksi: ${teamId}`;
+            const list = document.getElementById('modal-tx-list');
+            list.innerHTML = '';
+
+            const teamTx = transactions.filter(t => t.teamId === teamId);
+            if (teamTx.length === 0) {
+                list.innerHTML = `<p class="py-6 text-center text-xs text-slate-400">Tiada rekod transaksi lagi.</p>`;
+            } else {
+                teamTx.forEach(tx => {
+                    const row = document.createElement('div');
+                    row.className = "py-3 flex flex-col gap-1 text-xs";
+                    row.innerHTML = `
+                        <div class="flex items-center justify-between font-mono text-[10px] text-slate-400">
+                            <span>${tx.timestamp}</span>
+                            <span class="font-bold ${tx.type === 'PURCHASE' ? 'text-rose-600' : 'text-emerald-600'}">${tx.type}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-700">${typeof tx.items === 'string' ? tx.items : tx.items.map(i => `${i.name} (x${i.qty})`).join(', ')}</span>
+                            <span class="font-black text-slate-900 font-orbitron">${tx.type === 'PURCHASE' ? '-' : '+'}${tx.totalAmount} MTX</span>
+                        </div>
+                    `;
+                    list.appendChild(row);
+                });
+            }
+            document.getElementById('audit-modal').classList.remove('hidden');
+        }
+
+        function closeAuditModal() {
+            document.getElementById('audit-modal').classList.add('hidden');
+        }
+
+        // --- STORE SETTING & INVENTORY MANAGEMENT ---
+        function renderSetupInventory() {
+            const tbody = document.getElementById('setup-inventory-tbody');
+            tbody.innerHTML = '';
+            inventory.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-xl">${item.icon}</td>
+                    <td class="py-3 px-3 font-bold text-slate-800">${item.name}</td>
+                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100">${item.category}</span></td>
+                    <td class="py-3 px-3 text-center font-black text-emerald-600 font-orbitron">${item.price} MTX</td>
+                    <td class="py-3 px-3 text-slate-400">${item.unit}</td>
+                    <td class="py-3 px-3 text-right flex items-center justify-end gap-1.5">
+                        <button onclick="openEditItemModal('${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-accentBlue hover:text-slate-900 rounded-lg text-xs font-bold transition-colors">Edit</button>
+                        <button onclick="deleteInventoryItem('${item.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 rounded-lg text-xs font-bold transition-colors">Padam</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openAddItemModal() {
+            document.getElementById('item-modal-title').innerText = "Tambah Bahan Baru";
+            document.getElementById('edit-item-id').value = "";
+            document.getElementById('modal-item-name').value = "";
+            document.getElementById('modal-item-category').value = "";
+            document.getElementById('modal-item-price').value = "";
+            document.getElementById('modal-item-unit').value = "";
+            document.getElementById('modal-item-icon').value = "📦";
+            document.getElementById('item-modal').classList.remove('hidden');
+        }
+
+        function openEditItemModal(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('item-modal-title').innerText = "Kemaskini Bahan";
+            document.getElementById('edit-item-id').value = item.id;
+            document.getElementById('modal-item-name').value = item.name;
+            document.getElementById('modal-item-category').value = item.category;
+            document.getElementById('modal-item-price').value = item.price;
+            document.getElementById('modal-item-unit').value = item.unit;
+            document.getElementById('modal-item-icon').value = item.icon;
+            document.getElementById('item-modal').classList.remove('hidden');
+        }
+
+        function closeItemModal() {
+            document.getElementById('item-modal').classList.add('hidden');
+        }
+
+        async function saveInventoryItem() {
+            const editId = document.getElementById('edit-item-id').value;
+            const name = document.getElementById('modal-item-name').value.trim();
+            const category = document.getElementById('modal-item-category').value.trim() || 'Am';
+            const price = parseInt(document.getElementById('modal-item-price').value) || 0;
+            const unit = document.getElementById('modal-item-unit').value.trim() || 'unit';
+            const icon = document.getElementById('modal-item-icon').value.trim() || '📦';
+
+            if (!name) {
+                notify("Sila masukkan nama bahan.", "error");
+                return;
+            }
+
+            if (editId) {
+                inventory = inventory.map(i => i.id === editId ? { id: editId, name, category, price, unit, icon } : i);
+            } else {
+                const newItem = { id: `item-${Date.now()}`, name, category, price, unit, icon };
+                inventory.push(newItem);
+            }
+
+            saveDataLocal();
+            renderSetupInventory();
+            renderCategories();
+            renderInventory();
+            closeItemModal();
+            notify("Katalog barangan kedai berjaya dikemaskini!");
+
+            if (gasUrl) {
+                await postToGoogleSheet('saveInventory', { inventory });
+            }
+        }
+
+        async function deleteInventoryItem(id) {
+            if (confirm("Adakah anda pasti mahu memadam bahan ini dari katalog kedai?")) {
+                inventory = inventory.filter(i => i.id !== id);
+                saveDataLocal();
+                renderSetupInventory();
+                renderCategories();
+                renderInventory();
+                notify("Bahan telah dipadam.");
+
+                if (gasUrl) {
+                    await postToGoogleSheet('saveInventory', { inventory });
+                }
+            }
+        }
+
+        function updateInitialBudget(val) {
+            initialBudget = parseInt(val) || 1000;
+            localStorage.setItem('techlympics_budget_v2.5', initialBudget);
+            updateTeamFinancialDisplay();
+            notify(`Bajet awal bagi kesemua 63 pasukan dikemaskini kepada ${initialBudget} MTX`);
+
+            if (gasUrl) {
+                postToGoogleSheet('saveSettings', { initialBudget });
+            }
+        }
+
+        // --- GOOGLE SHEETS SYNC FUNCTIONS ---
+        function openGasModal() { document.getElementById('gas-modal').classList.remove('hidden'); }
+        function closeGasModal() { document.getElementById('gas-modal').classList.add('hidden'); }
+
+        async function saveAndTestGasUrl() {
+            const url = document.getElementById('gas-url-input').value.trim();
+            gasUrl = url;
+            localStorage.setItem('techlympics_gas_url_v2.5', gasUrl);
+
+            if (!gasUrl) {
+                document.getElementById('sync-status-badge').innerText = "Offline (Local)";
+                document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700";
+                notify("URL Google Sheet dikosongkan. Kembali ke mod offline lokal.");
+                return;
+            }
+
+            notify("Sedang menyambung ke Google Sheets...");
+            await syncWithGoogleSheet(true);
+        }
+
+        async function syncWithGoogleSheet(showAlerts = false) {
+            if (!gasUrl) return;
+            try {
+                const res = await fetch(gasUrl);
+                const data = await res.json();
+                
+                if (data.inventory && data.inventory.length > 0) {
+                    inventory = data.inventory;
+                }
+                if (data.transactions && data.transactions.length > 0) {
+                    transactions = data.transactions.map(t => ({
+                        ...t,
+                        items: typeof t.items === 'string' ? JSON.parse(t.items) : t.items
+                    }));
+                }
+                if (data.settings && data.settings.length > 0) {
+                    const bSetting = data.settings.find(s => s.key === 'initialBudget');
+                    if (bSetting) {
+                        initialBudget = parseInt(bSetting.value) || 1000;
+                        document.getElementById('budget-input').value = initialBudget;
+                        localStorage.setItem('techlympics_budget_v2.5', initialBudget);
+                    }
+                }
+
+                saveDataLocal();
+                renderSetupInventory();
+                renderCategories();
+                renderInventory();
+                updateTeamFinancialDisplay();
+
+                document.getElementById('sync-status-badge').innerText = "Synced (Google Sheet)";
+                document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                if (showAlerts) notify("Berjaya sync dengan Google Sheet merentasi laptop!");
+            } catch (err) {
+                console.error("Sync Error:", err);
+                document.getElementById('sync-status-badge').innerText = "Sync Error";
+                document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                if (showAlerts) notify("Gagal menyambung ke Google Sheet. Sila semak URL Web App.", "error");
+            }
+        }
+
+        async function postToGoogleSheet(action, payload) {
+            if (!gasUrl) return;
+            try {
+                await fetch(gasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...payload })
+                });
+            } catch (err) {
+                console.error("Post Error:", err);
+            }
+        }
+
+        // --- LOCAL STORAGE HELPERS ---
+        function saveDataLocal() {
+            localStorage.setItem('techlympics_inventory_v2.5', JSON.stringify(inventory));
+            localStorage.setItem('techlympics_transactions_v2.5', JSON.stringify(transactions));
+        }
+
+        function exportDataJSON() {
+            const exportObj = { inventory, transactions, initialBudget };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
+            const anchor = document.createElement('a');
+            anchor.setAttribute("href", dataStr);
+            anchor.setAttribute("download", `techlympics_ledger_v2.5_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+        }
+
+        function resetAllTransactions() {
+            if (confirm("Padam semua rekod transaksi kedai? Data tidak boleh dikembalikan!")) {
+                transactions = [];
+                saveDataLocal();
+                updateTeamFinancialDisplay();
+                renderLeaderboard();
+                notify("Semua transaksi telah diset semula.");
+            }
+        }
+    </script>
+</body>
+</html>
