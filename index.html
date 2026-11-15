@@ -82,7 +82,7 @@
                         </span>
                     </div>
                     <h1 class="text-base font-extrabold tracking-tight text-white font-orbitron">
-                        Virtual Store & Ledger System (63 Teams)
+                        Virtual Store & Ledger System (64 Teams)
                     </h1>
                 </div>
             </div>
@@ -151,7 +151,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <i data-lucide="credit-card" class="w-5 h-5 text-accentBlue"></i>
-                            <h2 class="font-bold text-sm text-slate-800">Pasukan Pembeli (63 Pasukan)</h2>
+                            <h2 class="font-bold text-sm text-slate-800">Pasukan Pembeli (64 Pasukan)</h2>
                         </div>
                         <button onclick="toggleScanner()" class="px-3 py-1.5 bg-accentPurple/15 text-accentPurple rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-accentPurple/25 transition-colors">
                             <i data-lucide="camera" class="w-3.5 h-3.5"></i> Imbas Lencana QR
@@ -240,9 +240,9 @@
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
-                        <i data-lucide="trophy" class="w-5 h-5 text-accentYellow"></i> Live Financial Leaderboard (63 Pasukan)
+                        <i data-lucide="trophy" class="w-5 h-5 text-accentYellow"></i> Live Financial Leaderboard (64 Pasukan)
                     </h2>
-                    <p class="text-xs text-slate-400">Papan pemuka kedudukan kewangan & efisiensi perbelanjaan 63 pasukan secara langsung.</p>
+                    <p class="text-xs text-slate-400">Papan pemuka kedudukan kewangan & efisiensi perbelanjaan semua pasukan secara langsung.</p>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -294,7 +294,7 @@
             <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
                 <div>
                     <h2 class="text-base font-black text-slate-800">Penjana Lencana Misi QR</h2>
-                    <p class="text-xs text-slate-400">Pilih pasukan (1-63) untuk menjana lencana fizikal rasmi berkod QR.</p>
+                    <p class="text-xs text-slate-400">Pilih pasukan (1-64) untuk menjana lencana fizikal rasmi berkod QR.</p>
                 </div>
 
                 <div class="flex flex-col gap-2">
@@ -390,7 +390,7 @@
                     <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
                         <i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-600"></i> Tetapan Bajet Awal Pasukan (MTX)
                     </h2>
-                    <p class="text-xs text-slate-400">Laraskan modal permulaan untuk kesemua 63 pasukan serentak.</p>
+                    <p class="text-xs text-slate-400">Laraskan modal permulaan untuk kesemua pasukan serentak.</p>
                 </div>
                 <div class="flex items-center gap-3 w-full sm:w-auto">
                     <input type="number" id="budget-input" value="1000" min="100" max="10000" step="50" onchange="updateInitialBudget(this.value)" class="w-36 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-sm font-black font-orbitron text-center text-slate-800 focus:outline-none">
@@ -543,11 +543,19 @@ function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var body = JSON.parse(e.postData.contents);
   var action = body.action;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
   
   if (action === "saveTransaction") {
     var sheet = ss.getSheetByName("Transactions") || ss.insertSheet("Transactions");
     if (sheet.getLastRow() === 0) sheet.appendRow(["id", "timestamp", "teamId", "session", "type", "items", "totalAmount"]);
-    sheet.appendRow([body.tx.id, body.tx.timestamp, body.tx.teamId, body.tx.session, body.tx.type, JSON.stringify(body.tx.items), body.tx.totalAmount]);
+    var ids = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().map(function(r) { return String(r[0]); }) : [];
+    if (ids.indexOf(String(body.tx.id)) === -1) {
+      sheet.appendRow([body.tx.id, body.tx.timestamp, body.tx.teamId, body.tx.session, body.tx.type, JSON.stringify(body.tx.items), body.tx.totalAmount]);
+    }
+  } else if (action === "resetTransactions") {
+    var sheet = ss.getSheetByName("Transactions");
+    if (sheet) { sheet.clear(); sheet.appendRow(["id", "timestamp", "teamId", "session", "type", "items", "totalAmount"]); }
   } else if (action === "saveInventory") {
     var sheet = ss.getSheetByName("Inventory") || ss.insertSheet("Inventory");
     sheet.clear();
@@ -680,7 +688,9 @@ function getSheetData(sheet) {
             { id: 'TEAM-60', name: "WEC Kejuruteraan 2", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA PUTRAJAYA" },
             { id: 'TEAM-61', name: "WEC TECHRRIOR", school: "SEKOLAH MENENGAH KEBANGSAAN AGAMA PUTRAJAYA" },
             { id: 'TEAM-62', name: "SAS CODE TETRA", school: "SEKOLAH SULTAN ALAM SHAH" },
-            { id: 'TEAM-63', name: "SAS TechForge", school: "SEKOLAH SULTAN ALAM SHAH" }
+            { id: 'TEAM-63', name: "SAS TechForge", school: "SEKOLAH SULTAN ALAM SHAH" },
+            // Pasukan ujian sahaja (bukan peserta sebenar) - padam baris ini selepas ujian
+            { id: 'TEAM-64', name: "PASUKAN UJIAN (TEST)", school: "UNTUK UJIAN SISTEM SAHAJA" }
         ];
 
         // App States
@@ -696,7 +706,13 @@ function getSheetData(sheet) {
         let initialBudget = parseInt(localStorage.getItem('techlympics_budget_v2.5') || '1000');
         let inventory = JSON.parse(localStorage.getItem('techlympics_inventory_v2.5') || JSON.stringify(DEFAULT_INVENTORY));
         let transactions = JSON.parse(localStorage.getItem('techlympics_transactions_v2.5') || '[]');
-        let gasUrl = localStorage.getItem('techlympics_gas_url_v2.5') || '';
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzUxEeqqHzcCVDCvWi8QkZfvg38yN6eJnLSaekCjWpOqM2LWxWKwG8d5vsIojGDa69bLw/exec';
+        const SYNC_INTERVAL_MS = 5000; // semak Google Sheet setiap 5 saat
+        let gasUrl = localStorage.getItem('techlympics_gas_url_v2.5') || DEFAULT_GAS_URL;
+        // Transaksi yang dibuat di PC ini tetapi belum disahkan wujud di Google Sheet: { [txId]: { tries, lastTry } }
+        let pendingTx = JSON.parse(localStorage.getItem('techlympics_pending_tx_v2.5') || '{}');
+        let syncInFlight = false;
+        let localEditHoldUntil = 0; // elak poll menimpa suntingan katalog/bajet yang baru dihantar
 
         // --- INIT ON LOAD ---
         window.addEventListener('DOMContentLoaded', async () => {
@@ -714,6 +730,12 @@ function getSheetData(sheet) {
             if (gasUrl) {
                 await syncWithGoogleSheet(true);
             }
+
+            // Live sync: tarik data terkini secara berkala + apabila tab kembali aktif
+            setInterval(() => { if (!document.hidden) syncWithGoogleSheet(false); }, SYNC_INTERVAL_MS);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) syncWithGoogleSheet(false); });
+            window.addEventListener('focus', () => syncWithGoogleSheet(false));
+            window.addEventListener('online', () => syncWithGoogleSheet(false));
         });
 
         // --- TOAST NOTIFICATION ---
@@ -970,6 +992,9 @@ function getSheetData(sheet) {
         async function executeCheckout() {
             if (cart.length === 0) return;
 
+            // Dapatkan baki terkini dari cloud dahulu (elak dua kaunter berbelanja baki yang sama)
+            if (gasUrl) await syncWithGoogleSheet(false, true);
+
             const stats = getTeamStats(selectedTeamId);
             const rawTotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
             const finalAmount = posMode === 'purchase' ? rawTotal : Math.round(rawTotal * 0.8);
@@ -990,6 +1015,7 @@ function getSheetData(sheet) {
             };
 
             transactions.unshift(newTx);
+            if (gasUrl) pendingTx[newTx.id] = { tries: 1, lastTry: Date.now() };
             saveDataLocal();
 
             if (gasUrl) {
@@ -1200,6 +1226,7 @@ function getSheetData(sheet) {
                 inventory.push(newItem);
             }
 
+            localEditHoldUntil = Date.now() + 15000;
             saveDataLocal();
             renderSetupInventory();
             renderCategories();
@@ -1215,6 +1242,7 @@ function getSheetData(sheet) {
         async function deleteInventoryItem(id) {
             if (confirm("Adakah anda pasti mahu memadam bahan ini dari katalog kedai?")) {
                 inventory = inventory.filter(i => i.id !== id);
+                localEditHoldUntil = Date.now() + 15000;
                 saveDataLocal();
                 renderSetupInventory();
                 renderCategories();
@@ -1229,9 +1257,10 @@ function getSheetData(sheet) {
 
         function updateInitialBudget(val) {
             initialBudget = parseInt(val) || 1000;
+            localEditHoldUntil = Date.now() + 15000;
             localStorage.setItem('techlympics_budget_v2.5', initialBudget);
             updateTeamFinancialDisplay();
-            notify(`Bajet awal bagi kesemua 63 pasukan dikemaskini kepada ${initialBudget} MTX`);
+            notify(`Bajet awal bagi kesemua pasukan dikemaskini kepada ${initialBudget} MTX`);
 
             if (gasUrl) {
                 postToGoogleSheet('saveSettings', { initialBudget });
@@ -1258,65 +1287,139 @@ function getSheetData(sheet) {
             await syncWithGoogleSheet(true);
         }
 
-        async function syncWithGoogleSheet(showAlerts = false) {
+        function setSyncBadge(state) {
+            const badge = document.getElementById('sync-status-badge');
+            if (state === 'ok') {
+                badge.innerText = `Live Sync ✓ ${new Date().toLocaleTimeString('ms-MY')}`;
+                badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+            } else {
+                badge.innerText = "Sync Error";
+                badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30";
+            }
+        }
+
+        // Data dari Google Sheet boleh bertukar jenis (nombor/teks/tarikh) - seragamkan supaya kiraan baki betul
+        function normalizeTx(t) {
+            let items = t.items;
+            if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch (e) { items = []; }
+            }
+            return {
+                ...t,
+                id: String(t.id).trim(),
+                teamId: String(t.teamId).trim(),
+                type: String(t.type).trim().toUpperCase(),
+                totalAmount: Number(t.totalAmount) || 0,
+                items: Array.isArray(items) ? items : []
+            };
+        }
+
+        function txSortKey(t) {
+            const n = parseInt(String(t.id).replace(/\D/g, ''), 10);
+            return isNaN(n) ? 0 : n;
+        }
+
+        // Paparkan semula semua bahagian yang bergantung pada data (termasuk leaderboard & audit)
+        function refreshAllViews(inventoryChanged) {
+            if (inventoryChanged) {
+                renderSetupInventory();
+                renderCategories();
+                renderInventory();
+            }
+            updateTeamFinancialDisplay();
+            renderLeaderboard();
+        }
+
+        async function syncWithGoogleSheet(showAlerts = false, force = false) {
             if (!gasUrl) return;
+            if (syncInFlight && !force) return;
+            syncInFlight = true;
             try {
-                const res = await fetch(gasUrl);
+                // cache-buster + no-store supaya pelayar tidak pulangkan data lama
+                const sep = gasUrl.includes('?') ? '&' : '?';
+                const res = await fetch(`${gasUrl}${sep}t=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
                 const data = await res.json();
-                
-                if (data.inventory && data.inventory.length > 0) {
-                    inventory = data.inventory;
+                const holdLocalEdits = Date.now() < localEditHoldUntil;
+
+                const before = JSON.stringify([inventory, transactions, initialBudget]);
+                const invBefore = JSON.stringify(inventory);
+
+                if (!holdLocalEdits && data.inventory && data.inventory.length > 0) {
+                    inventory = data.inventory.map(i => ({ ...i, id: String(i.id), price: Number(i.price) || 0 }));
                 }
-                if (data.transactions && data.transactions.length > 0) {
-                    transactions = data.transactions.map(t => ({
-                        ...t,
-                        items: typeof t.items === 'string' ? JSON.parse(t.items) : t.items
-                    }));
-                }
-                if (data.settings && data.settings.length > 0) {
+
+                // Google Sheet ialah sumber rujukan; transaksi tempatan yang belum sampai dikekalkan & dihantar semula
+                const serverTx = [];
+                const seen = new Set();
+                (data.transactions || []).forEach(raw => {
+                    if (raw.id === '' || raw.id === null || raw.id === undefined) return;
+                    const t = normalizeTx(raw);
+                    if (seen.has(t.id)) return; // buang pendua
+                    seen.add(t.id);
+                    serverTx.push(t);
+                });
+                const stillPending = [];
+                Object.keys(pendingTx).forEach(id => {
+                    if (seen.has(id)) { delete pendingTx[id]; return; }
+                    const local = transactions.find(t => t.id === id);
+                    if (!local) { delete pendingTx[id]; return; }
+                    stillPending.push(local);
+                    const p = pendingTx[id];
+                    if (Date.now() - p.lastTry > 20000 && p.tries < 5) {
+                        p.tries++; p.lastTry = Date.now();
+                        postToGoogleSheet('saveTransaction', { tx: local }, false);
+                    }
+                });
+                transactions = [...serverTx, ...stillPending].sort((a, b) => txSortKey(b) - txSortKey(a));
+
+                if (!holdLocalEdits && data.settings && data.settings.length > 0) {
                     const bSetting = data.settings.find(s => s.key === 'initialBudget');
                     if (bSetting) {
                         initialBudget = parseInt(bSetting.value) || 1000;
-                        document.getElementById('budget-input').value = initialBudget;
+                        const budgetInput = document.getElementById('budget-input');
+                        if (document.activeElement !== budgetInput) budgetInput.value = initialBudget;
                         localStorage.setItem('techlympics_budget_v2.5', initialBudget);
                     }
                 }
 
                 saveDataLocal();
-                renderSetupInventory();
-                renderCategories();
-                renderInventory();
-                updateTeamFinancialDisplay();
+                if (showAlerts || before !== JSON.stringify([inventory, transactions, initialBudget])) {
+                    refreshAllViews(showAlerts || invBefore !== JSON.stringify(inventory));
+                }
 
-                document.getElementById('sync-status-badge').innerText = "Synced (Google Sheet)";
-                document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                setSyncBadge('ok');
                 if (showAlerts) notify("Berjaya sync dengan Google Sheet merentasi laptop!");
             } catch (err) {
                 console.error("Sync Error:", err);
-                document.getElementById('sync-status-badge').innerText = "Sync Error";
-                document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                setSyncBadge('error');
                 if (showAlerts) notify("Gagal menyambung ke Google Sheet. Sila semak URL Web App.", "error");
+            } finally {
+                syncInFlight = false;
             }
         }
 
-        async function postToGoogleSheet(action, payload) {
+        async function postToGoogleSheet(action, payload, resync = true) {
             if (!gasUrl) return;
             try {
+                // text/plain = "simple request" (tiada CORS preflight, yang Apps Script tidak sokong)
                 await fetch(gasUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action, ...payload })
                 });
             } catch (err) {
                 console.error("Post Error:", err);
             }
+            // sahkan data sudah sampai di cloud
+            if (resync) setTimeout(() => syncWithGoogleSheet(false), 1500);
         }
 
         // --- LOCAL STORAGE HELPERS ---
         function saveDataLocal() {
             localStorage.setItem('techlympics_inventory_v2.5', JSON.stringify(inventory));
             localStorage.setItem('techlympics_transactions_v2.5', JSON.stringify(transactions));
+            localStorage.setItem('techlympics_pending_tx_v2.5', JSON.stringify(pendingTx));
         }
 
         function exportDataJSON() {
@@ -1333,9 +1436,11 @@ function getSheetData(sheet) {
         function resetAllTransactions() {
             if (confirm("Padam semua rekod transaksi kedai? Data tidak boleh dikembalikan!")) {
                 transactions = [];
+                pendingTx = {};
                 saveDataLocal();
                 updateTeamFinancialDisplay();
                 renderLeaderboard();
+                if (gasUrl) postToGoogleSheet('resetTransactions', {});
                 notify("Semua transaksi telah diset semula.");
             }
         }
