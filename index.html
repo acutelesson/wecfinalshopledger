@@ -1265,19 +1265,39 @@ function getSheetData(sheet) {
                 const data = await res.json();
                 
                 if (data.inventory && data.inventory.length > 0) {
-                    inventory = data.inventory;
-                }
-                if (data.transactions && data.transactions.length > 0) {
-                    transactions = data.transactions.map(t => ({
-                        ...t,
-                        items: typeof t.items === 'string' ? JSON.parse(t.items) : t.items
+                    inventory = data.inventory.map(item => ({
+                        ...item,
+                        price: Number(item.price) || 0
                     }));
+                }
+                if (data.transactions && Array.isArray(data.transactions)) {
+                    transactions = data.transactions.map(t => {
+                        let parsedItems = [];
+                        try {
+                            parsedItems = typeof t.items === 'string' && t.items.trim() !== '' 
+                                ? JSON.parse(t.items) 
+                                : (Array.isArray(t.items) ? t.items : []);
+                        } catch (e) {
+                            console.warn("Ralat parse items:", t.id, e);
+                        }
+
+                        return {
+                            ...t,
+                            id: String(t.id || '').trim(),
+                            teamId: String(t.teamId || '').trim(),
+                            session: Number(t.session) || 1,
+                            type: String(t.type || 'PURCHASE').trim(),
+                            totalAmount: Number(t.totalAmount) || 0,
+                            items: parsedItems
+                        };
+                    });
                 }
                 if (data.settings && data.settings.length > 0) {
                     const bSetting = data.settings.find(s => s.key === 'initialBudget');
                     if (bSetting) {
                         initialBudget = parseInt(bSetting.value) || 1000;
-                        document.getElementById('budget-input').value = initialBudget;
+                        const budgetEl = document.getElementById('budget-input');
+                        if (budgetEl) budgetEl.value = initialBudget;
                         localStorage.setItem('techlympics_budget_v2.5', initialBudget);
                     }
                 }
