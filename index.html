@@ -1292,6 +1292,34 @@ function getSheetData(sheet) {
                         };
                     });
                 }
+                if (data.inventory && data.inventory.length > 0) {
+                    inventory = data.inventory.map(item => ({
+                        ...item,
+                        price: Number(item.price) || 0
+                    }));
+                }
+                if (data.transactions && Array.isArray(data.transactions)) {
+                    transactions = data.transactions.map(t => {
+                        let parsedItems = [];
+                        try {
+                            parsedItems = typeof t.items === 'string' && t.items.trim() !== '' 
+                                ? JSON.parse(t.items) 
+                                : (Array.isArray(t.items) ? t.items : []);
+                        } catch (e) {
+                            console.warn("Ralat parse items:", t.id, e);
+                        }
+
+                        return {
+                            ...t,
+                            id: String(t.id || '').trim(),
+                            teamId: String(t.teamId || '').trim(),
+                            session: Number(t.session) || 1,
+                            type: String(t.type || 'PURCHASE').trim(),
+                            totalAmount: Number(t.totalAmount) || 0,
+                            items: parsedItems
+                        };
+                    });
+                }
                 if (data.settings && data.settings.length > 0) {
                     const bSetting = data.settings.find(s => s.key === 'initialBudget');
                     if (bSetting) {
@@ -1307,6 +1335,12 @@ function getSheetData(sheet) {
                 renderCategories();
                 renderInventory();
                 updateTeamFinancialDisplay();
+
+                // Panggil fungsi kemas kini paparan Rekod Audit & Statistik (mana-mana yang wujud dalam kod)
+                if (typeof renderAudit === 'function') renderAudit();
+                if (typeof renderAuditTable === 'function') renderAuditTable();
+                if (typeof renderTransactions === 'function') renderTransactions();
+                if (typeof renderLedger === 'function') renderLedger();
 
                 document.getElementById('sync-status-badge').innerText = "Synced (Google Sheet)";
                 document.getElementById('sync-status-badge').className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
